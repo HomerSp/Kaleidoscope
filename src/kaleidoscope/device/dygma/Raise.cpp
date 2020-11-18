@@ -61,10 +61,17 @@ struct RaiseHands {
     return keyscan_interval_;
   }
 
+  static void ledBrightnessCorrection(uint8_t brightness);
+  static uint8_t ledBrightnessCorrection() {
+    return led_brightness_correction_;
+  }
+
  private:
   static uint16_t keyscan_interval_;
+  static uint8_t led_brightness_correction_;
   static bool side_power_;
   static uint16_t settings_base_;
+  static uint16_t settings_brightness_;
   static constexpr uint8_t iso_only_led_ = 19;
 };
 
@@ -73,6 +80,8 @@ raise::Hand RaiseHands::rightHand(1);
 uint8_t RaiseHands::layout;
 bool RaiseHands::side_power_;
 uint16_t RaiseHands::settings_base_;
+uint16_t RaiseHands::settings_brightness_;
+uint8_t RaiseHands::led_brightness_correction_ = 255;
 uint16_t RaiseHands::keyscan_interval_ = 50;
 
 void RaiseHands::setSidePower(bool power) {
@@ -82,6 +91,7 @@ void RaiseHands::setSidePower(bool power) {
 
 void RaiseHands::setup() {
   settings_base_ = ::EEPROMSettings.requestSlice(sizeof(keyscan_interval_));
+  settings_brightness_ = ::EEPROMSettings.requestSlice(sizeof(led_brightness_correction_));
 
   // If keyscan is max, assume that EEPROM is uninitialized, and store the
   // defaults.
@@ -92,6 +102,14 @@ void RaiseHands::setup() {
     Runtime.storage().commit();
   }
   Runtime.storage().get(settings_base_, keyscan_interval_);
+
+  uint8_t brightness;
+  Runtime.storage().get(settings_brightness_, brightness);
+  if (brightness == 0xff) {
+    Runtime.storage().put(settings_brightness_, led_brightness_correction_);
+    Runtime.storage().commit();
+  }
+  Runtime.storage().get(settings_brightness_, led_brightness_correction_);
 }
 
 void RaiseHands::keyscanInterval(uint16_t interval) {
@@ -102,10 +120,22 @@ void RaiseHands::keyscanInterval(uint16_t interval) {
   Runtime.storage().commit();
 }
 
+void RaiseHands::ledBrightnessCorrection(uint8_t brightness) {
+  leftHand.setBrightness(brightness);
+  rightHand.setBrightness(brightness);
+  led_brightness_correction_ = brightness;
+  Runtime.storage().put(settings_brightness_, led_brightness_correction_);
+  Runtime.storage().commit();
+}
+
 void RaiseHands::initializeSides() {
   // key scan interval from eeprom
   leftHand.setKeyscanInterval(keyscan_interval_);
   rightHand.setKeyscanInterval(keyscan_interval_);
+
+  // led brightness from eeprom
+  leftHand.setBrightness(led_brightness_correction_);
+  rightHand.setBrightness(led_brightness_correction_);
 
   // get ANSI/ISO at every side replug
   uint8_t l_layout = leftHand.readLayout();
@@ -145,8 +175,7 @@ constexpr uint8_t RaiseLEDDriver::led_map[][RaiseLEDDriverProps::led_count + 1];
 constexpr uint8_t RaiseLEDDriverProps::key_led_map[];
 
 void RaiseLEDDriver::setBrightness(uint8_t brightness) {
-  RaiseHands::leftHand.setBrightness(brightness);
-  RaiseHands::rightHand.setBrightness(brightness);
+  RaiseHands::ledBrightnessCorrection(brightness);
   for (uint8_t i = 0; i < LED_BANKS; i++) {
     isLEDChangedLeft[i] = true;
     isLEDChangedRight[i] = true;
@@ -154,7 +183,7 @@ void RaiseLEDDriver::setBrightness(uint8_t brightness) {
 }
 
 uint8_t RaiseLEDDriver::getBrightness() {
-  return RaiseHands::leftHand.getBrightness();
+  return RaiseHands::ledBrightnessCorrection();
 }
 
 void RaiseLEDDriver::syncLeds() {
