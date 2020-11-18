@@ -16,6 +16,7 @@
 
 #include "Kaleidoscope-DynamicMacros.h"
 #include "Kaleidoscope-FocusSerial.h"
+#include <Kaleidoscope-OneShot.h>
 #include "kaleidoscope/keyswitch_state.h"
 #include "kaleidoscope/key_events.h"
 
@@ -118,7 +119,7 @@ void DynamicMacros::updateDynamicMacroCache(void) {
 
 void DynamicMacros::play(uint8_t macro_id) {
   macro_t macro = MACRO_ACTION_END;
-  uint8_t interval = 0;
+  uint16_t interval = 0;
   uint8_t flags;
   bool explicit_report = false;
   uint16_t pos;
@@ -137,11 +138,16 @@ void DynamicMacros::play(uint8_t macro_id) {
       kaleidoscope::Runtime.hid().keyboard().sendReport();
       kaleidoscope::Runtime.hid().mouse().sendReport();
       break;
-    case MACRO_ACTION_STEP_INTERVAL:
-      interval = Runtime.storage().read(pos++);
+    case MACRO_ACTION_STEP_INTERVAL: {
+      uint8_t inter1 = Runtime.storage().read(pos++);
+      uint8_t inter2 = Runtime.storage().read(pos++);
+      interval = (inter1 << 8) | inter2;
       break;
+    }
     case MACRO_ACTION_STEP_WAIT: {
-      uint8_t wait = Runtime.storage().read(pos++);
+      uint8_t d2 = Runtime.storage().read(pos++);
+      uint8_t d1 = Runtime.storage().read(pos++);
+      uint16_t wait = (d2 << 8) | d1;
       delay(wait);
       break;
     }
@@ -188,7 +194,13 @@ void DynamicMacros::play(uint8_t macro_id) {
       break;
     }
 
-    case MACRO_ACTION_END:
+    case MACRO_ACTION_END: {
+      if (::OneShot.isActive() && !::OneShot.isPressed())
+      {
+        ::OneShot.cancel(true);
+      }
+      return;
+    }
     default:
       return;
     }
@@ -198,11 +210,11 @@ void DynamicMacros::play(uint8_t macro_id) {
 }
 
 EventHandlerResult DynamicMacros::onKeyswitchEvent(Key &mappedKey, KeyAddr key_addr, uint8_t keyState) {
-  if (mappedKey.getRaw() < ranges::DYNAMIC_MACRO_FIRST || mappedKey.getRaw() > ranges::DYNAMIC_MACRO_LAST)
+  if (mappedKey.getFlags() != (SYNTHETIC | B00100000))
     return EventHandlerResult::OK;
 
   if (keyToggledOn(keyState)) {
-    play(mappedKey.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
+    play(mappedKey.getKeyCode());
   }
 
   return EventHandlerResult::EVENT_CONSUMED;
