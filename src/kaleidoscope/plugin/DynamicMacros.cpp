@@ -14,11 +14,12 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <Kaleidoscope-OneShot.h>
+
 #include "Kaleidoscope-DynamicMacros.h"
 #include "Kaleidoscope-FocusSerial.h"
-#include <Kaleidoscope-OneShot.h>
-#include "kaleidoscope/keyswitch_state.h"
 #include "kaleidoscope/key_events.h"
+#include "kaleidoscope/keyswitch_state.h"
 
 namespace kaleidoscope {
 namespace plugin {
@@ -27,11 +28,12 @@ uint16_t DynamicMacros::storage_base_;
 uint16_t DynamicMacros::storage_size_;
 uint16_t DynamicMacros::map_[];
 
-static void playMacroKeyswitchEvent(Key key, uint8_t keyswitch_state, bool explicit_report) {
-  handleKeyswitchEvent(key, UnknownKeyswitchLocation, keyswitch_state | INJECTED);
+static void playMacroKeyswitchEvent(Key key, uint8_t keyswitch_state,
+                                    bool explicit_report) {
+  handleKeyswitchEvent(key, UnknownKeyswitchLocation,
+                       keyswitch_state | INJECTED);
 
-  if (explicit_report)
-    return;
+  if (explicit_report) return;
 
   kaleidoscope::Runtime.hid().keyboard().sendReport();
   kaleidoscope::Runtime.hid().mouse().sendReport();
@@ -46,8 +48,9 @@ static void playKeyCode(Key key, uint8_t keyStates, bool explicit_report) {
   }
 }
 
-static void readKeyCodeAndPlay(uint16_t pos, uint8_t flags, uint8_t keyStates, bool explicit_report) {
-  Key key(Runtime.storage().read(pos++), // key_code
+static void readKeyCodeAndPlay(uint16_t pos, uint8_t flags, uint8_t keyStates,
+                               bool explicit_report) {
+  Key key(Runtime.storage().read(pos++),  // key_code
           flags);
 
   playKeyCode(key, keyStates, explicit_report);
@@ -64,55 +67,54 @@ void DynamicMacros::updateDynamicMacroCache(void) {
   while (pos < storage_base_ + storage_size_) {
     macro = Runtime.storage().read(pos++);
     switch (macro) {
-    case MACRO_ACTION_STEP_EXPLICIT_REPORT:
-    case MACRO_ACTION_STEP_IMPLICIT_REPORT:
-    case MACRO_ACTION_STEP_SEND_REPORT:
-      previous_macro_ended = false;
-      break;
+      case MACRO_ACTION_STEP_EXPLICIT_REPORT:
+      case MACRO_ACTION_STEP_IMPLICIT_REPORT:
+      case MACRO_ACTION_STEP_SEND_REPORT:
+        previous_macro_ended = false;
+        break;
 
-    case MACRO_ACTION_STEP_INTERVAL:
-    case MACRO_ACTION_STEP_WAIT:
-    case MACRO_ACTION_STEP_KEYCODEDOWN:
-    case MACRO_ACTION_STEP_KEYCODEUP:
-    case MACRO_ACTION_STEP_TAPCODE:
-      previous_macro_ended = false;
-      pos++;
-      break;
+      case MACRO_ACTION_STEP_INTERVAL:
+      case MACRO_ACTION_STEP_WAIT:
+      case MACRO_ACTION_STEP_KEYCODEDOWN:
+      case MACRO_ACTION_STEP_KEYCODEUP:
+      case MACRO_ACTION_STEP_TAPCODE:
+        previous_macro_ended = false;
+        pos++;
+        break;
 
-    case MACRO_ACTION_STEP_KEYDOWN:
-    case MACRO_ACTION_STEP_KEYUP:
-    case MACRO_ACTION_STEP_TAP:
-      previous_macro_ended = false;
-      pos += 2;
-      break;
+      case MACRO_ACTION_STEP_KEYDOWN:
+      case MACRO_ACTION_STEP_KEYUP:
+      case MACRO_ACTION_STEP_TAP:
+        previous_macro_ended = false;
+        pos += 2;
+        break;
 
-    case MACRO_ACTION_STEP_TAP_SEQUENCE: {
-      previous_macro_ended = false;
-      uint8_t keyCode, flags;
-      do {
-        flags = Runtime.storage().read(pos++);
-        keyCode = Runtime.storage().read(pos++);
-      } while (!(flags == 0 && keyCode == 0));
-      break;
-    }
+      case MACRO_ACTION_STEP_TAP_SEQUENCE: {
+        previous_macro_ended = false;
+        uint8_t keyCode, flags;
+        do {
+          flags = Runtime.storage().read(pos++);
+          keyCode = Runtime.storage().read(pos++);
+        } while (!(flags == 0 && keyCode == 0));
+        break;
+      }
 
-    case MACRO_ACTION_STEP_TAP_CODE_SEQUENCE: {
-      previous_macro_ended = false;
-      uint8_t keyCode, flags;
-      do {
-        keyCode = Runtime.storage().read(pos++);
-      } while (keyCode != 0);
-      break;
-    }
+      case MACRO_ACTION_STEP_TAP_CODE_SEQUENCE: {
+        previous_macro_ended = false;
+        uint8_t keyCode, flags;
+        do {
+          keyCode = Runtime.storage().read(pos++);
+        } while (keyCode != 0);
+        break;
+      }
 
-    case MACRO_ACTION_END:
-      map_[++current_id] = pos - storage_base_;
+      case MACRO_ACTION_END:
+        map_[++current_id] = pos - storage_base_;
 
-      if (previous_macro_ended)
-        return;
+        if (previous_macro_ended) return;
 
-      previous_macro_ended = true;
-      break;
+        previous_macro_ended = true;
+        break;
     }
   }
 }
@@ -128,88 +130,89 @@ void DynamicMacros::play(uint8_t macro_id) {
 
   while (true) {
     switch (macro = Runtime.storage().read(pos++)) {
-    case MACRO_ACTION_STEP_EXPLICIT_REPORT:
-      explicit_report = true;
-      break;
-    case MACRO_ACTION_STEP_IMPLICIT_REPORT:
-      explicit_report = false;
-      break;
-    case MACRO_ACTION_STEP_SEND_REPORT:
-      kaleidoscope::Runtime.hid().keyboard().sendReport();
-      kaleidoscope::Runtime.hid().mouse().sendReport();
-      break;
-    case MACRO_ACTION_STEP_INTERVAL: {
-      uint8_t inter1 = Runtime.storage().read(pos++);
-      uint8_t inter2 = Runtime.storage().read(pos++);
-      interval = (inter1 << 8) | inter2;
-      break;
-    }
-    case MACRO_ACTION_STEP_WAIT: {
-      uint8_t d2 = Runtime.storage().read(pos++);
-      uint8_t d1 = Runtime.storage().read(pos++);
-      uint16_t wait = (d2 << 8) | d1;
-      delay(wait);
-      break;
-    }
-    case MACRO_ACTION_STEP_KEYDOWN:
-      flags = Runtime.storage().read(pos++);
-      readKeyCodeAndPlay(pos++, flags, IS_PRESSED, explicit_report);
-      break;
-    case MACRO_ACTION_STEP_KEYUP:
-      flags = Runtime.storage().read(pos++);
-      readKeyCodeAndPlay(pos++, flags, WAS_PRESSED, explicit_report);
-      break;
-    case MACRO_ACTION_STEP_TAP:
-      flags = Runtime.storage().read(pos++);
-      readKeyCodeAndPlay(pos++, flags, IS_PRESSED | WAS_PRESSED, false);
-      break;
-
-    case MACRO_ACTION_STEP_KEYCODEDOWN:
-      readKeyCodeAndPlay(pos++, 0, IS_PRESSED, explicit_report);
-      break;
-    case MACRO_ACTION_STEP_KEYCODEUP:
-      readKeyCodeAndPlay(pos++, 0, WAS_PRESSED, explicit_report);
-      break;
-    case MACRO_ACTION_STEP_TAPCODE:
-      readKeyCodeAndPlay(pos++, 0, IS_PRESSED | WAS_PRESSED, false);
-      break;
-
-    case MACRO_ACTION_STEP_TAP_SEQUENCE: {
-      uint8_t keyCode;
-      do {
-        flags = Runtime.storage().read(pos++);
-        keyCode = Runtime.storage().read(pos++);
-        playKeyCode(Key(keyCode, flags), IS_PRESSED | WAS_PRESSED, false);
-        delay(interval);
-      } while (!(flags == 0 && keyCode == 0));
-      break;
-    }
-    case MACRO_ACTION_STEP_TAP_CODE_SEQUENCE: {
-      uint8_t keyCode;
-      do {
-        keyCode = Runtime.storage().read(pos++);
-        playKeyCode(Key(keyCode, 0), IS_PRESSED | WAS_PRESSED, false);
-        delay(interval);
-      } while (keyCode != 0);
-      break;
-    }
-
-    case MACRO_ACTION_END: {
-      if (::OneShot.isActive() && !::OneShot.isPressed())
-      {
-        ::OneShot.cancel(true);
+      case MACRO_ACTION_STEP_EXPLICIT_REPORT:
+        explicit_report = true;
+        break;
+      case MACRO_ACTION_STEP_IMPLICIT_REPORT:
+        explicit_report = false;
+        break;
+      case MACRO_ACTION_STEP_SEND_REPORT:
+        kaleidoscope::Runtime.hid().keyboard().sendReport();
+        kaleidoscope::Runtime.hid().mouse().sendReport();
+        break;
+      case MACRO_ACTION_STEP_INTERVAL: {
+        uint8_t inter1 = Runtime.storage().read(pos++);
+        uint8_t inter2 = Runtime.storage().read(pos++);
+        interval = (inter1 << 8) | inter2;
+        break;
       }
-      return;
-    }
-    default:
-      return;
+      case MACRO_ACTION_STEP_WAIT: {
+        uint8_t d2 = Runtime.storage().read(pos++);
+        uint8_t d1 = Runtime.storage().read(pos++);
+        uint16_t wait = (d2 << 8) | d1;
+        delay(wait);
+        break;
+      }
+      case MACRO_ACTION_STEP_KEYDOWN:
+        flags = Runtime.storage().read(pos++);
+        readKeyCodeAndPlay(pos++, flags, IS_PRESSED, explicit_report);
+        break;
+      case MACRO_ACTION_STEP_KEYUP:
+        flags = Runtime.storage().read(pos++);
+        readKeyCodeAndPlay(pos++, flags, WAS_PRESSED, explicit_report);
+        break;
+      case MACRO_ACTION_STEP_TAP:
+        flags = Runtime.storage().read(pos++);
+        readKeyCodeAndPlay(pos++, flags, IS_PRESSED | WAS_PRESSED, false);
+        break;
+
+      case MACRO_ACTION_STEP_KEYCODEDOWN:
+        readKeyCodeAndPlay(pos++, 0, IS_PRESSED, explicit_report);
+        break;
+      case MACRO_ACTION_STEP_KEYCODEUP:
+        readKeyCodeAndPlay(pos++, 0, WAS_PRESSED, explicit_report);
+        break;
+      case MACRO_ACTION_STEP_TAPCODE:
+        readKeyCodeAndPlay(pos++, 0, IS_PRESSED | WAS_PRESSED, false);
+        break;
+
+      case MACRO_ACTION_STEP_TAP_SEQUENCE: {
+        uint8_t keyCode;
+        do {
+          flags = Runtime.storage().read(pos++);
+          keyCode = Runtime.storage().read(pos++);
+          playKeyCode(Key(keyCode, flags), IS_PRESSED | WAS_PRESSED, false);
+          delay(interval);
+        } while (!(flags == 0 && keyCode == 0));
+        break;
+      }
+      case MACRO_ACTION_STEP_TAP_CODE_SEQUENCE: {
+        uint8_t keyCode;
+        do {
+          keyCode = Runtime.storage().read(pos++);
+          playKeyCode(Key(keyCode, 0), IS_PRESSED | WAS_PRESSED, false);
+          delay(interval);
+        } while (keyCode != 0);
+        break;
+      }
+
+      case MACRO_ACTION_END: {
+        if (::OneShot.isActive() && !::OneShot.isPressed()) {
+          ::OneShot.cancel(true);
+        }
+        return;
+      }
+      default:
+        return;
     }
 
     delay(interval);
   }
 }
 
-EventHandlerResult DynamicMacros::onKeyswitchEvent(Key &mappedKey, KeyAddr key_addr, uint8_t keyState) {
+EventHandlerResult DynamicMacros::onKeyswitchEvent(Key &mappedKey,
+                                                   KeyAddr key_addr,
+                                                   uint8_t keyState) {
   if (mappedKey.getFlags() != (SYNTHETIC | B00100000))
     return EventHandlerResult::OK;
 
@@ -263,8 +266,7 @@ void DynamicMacros::reserve_storage(uint16_t size) {
   updateDynamicMacroCache();
 }
 
-
-}
-}
+}  // namespace plugin
+}  //  namespace kaleidoscope
 
 kaleidoscope::plugin::DynamicMacros DynamicMacros;
