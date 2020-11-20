@@ -218,10 +218,10 @@ void RaiseLEDDriver::updateNeuronLED() {
 
 void RaiseLEDDriver::setCrgbAt(uint8_t i, cRGB crgb) {
   // prevent reading off the end of the led_map array
-  if (i >= Props_::led_count) return;
+  if (i >= RaiseLEDDriverProps::led_count) return;
 
   // neuron LED
-  if (i == Props_::led_count - 1) {
+  if (i == RaiseLEDDriverProps::led_count - 1) {
     isLEDChangedNeuron |= !(neuronLED.r == crgb.r && neuronLED.g == crgb.g &&
                             neuronLED.b == crgb.b);
     neuronLED = crgb;
@@ -249,7 +249,7 @@ void RaiseLEDDriver::setCrgbAt(uint8_t i, cRGB crgb) {
 }
 
 cRGB RaiseLEDDriver::getCrgbAt(uint8_t i) {
-  if (i >= Props_::led_count) return {0, 0, 0};
+  if (i >= RaiseLEDDriverProps::led_count) return {0, 0, 0};
 
   uint8_t sled_num = led_map[RaiseHands::layout][i];
   if (sled_num < LEDS_PER_HAND) {
