@@ -164,6 +164,7 @@ void RaiseHands::initializeSides() {
 /********* LED Driver *********/
 
 bool RaiseLEDDriver::isLEDChangedNeuron;
+bool RaiseLEDDriver::isAnyLEDChanged;
 uint8_t RaiseLEDDriver::isLEDChangedLeft[LED_BANKS];
 uint8_t RaiseLEDDriver::isLEDChangedRight[LED_BANKS];
 cRGB RaiseLEDDriver::neuronLED;
@@ -177,6 +178,8 @@ void RaiseLEDDriver::setBrightness(uint8_t brightness) {
     isLEDChangedLeft[i] = true;
     isLEDChangedRight[i] = true;
   }
+
+  isAnyLEDChanged = true;
 }
 
 uint8_t RaiseLEDDriver::getBrightness() {
@@ -184,17 +187,22 @@ uint8_t RaiseLEDDriver::getBrightness() {
 }
 
 void RaiseLEDDriver::syncLeds() {
-  // left and right sides
-  for (uint8_t i = 0; i < LED_BANKS; i++) {
-    // only send the banks that have changed - try to improve jitter performance
-    if (isLEDChangedLeft[i]) {
-      RaiseHands::leftHand.sendLEDBank(i);
-      isLEDChangedLeft[i] = false;
+  // Only update if we have any changes
+  if (isAnyLEDChanged) {
+    // left and right sides
+    for (uint8_t i = 0; i < LED_BANKS; i++) {
+      // only send the banks that have changed - try to improve jitter performance
+      if (isLEDChangedLeft[i]) {
+        RaiseHands::leftHand.sendLEDBank(i);
+        isLEDChangedLeft[i] = false;
+      }
+      if (isLEDChangedRight[i]) {
+        RaiseHands::rightHand.sendLEDBank(i);
+        isLEDChangedRight[i] = false;
+      }
     }
-    if (isLEDChangedRight[i]) {
-      RaiseHands::rightHand.sendLEDBank(i);
-      isLEDChangedRight[i] = false;
-    }
+
+    isAnyLEDChanged = false;
   }
 
   if (isLEDChangedNeuron) {
@@ -235,12 +243,16 @@ void RaiseLEDDriver::setCrgbAt(uint8_t i, cRGB crgb) {
     RaiseHands::leftHand.led_data.leds[sled_num] = crgb;
     isLEDChangedLeft[uint8_t(sled_num / 8)] |=
         !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
+
+    isAnyLEDChanged = isAnyLEDChanged || isLEDChangedLeft[uint8_t(sled_num / 8)];
   } else if (sled_num < 2 * LEDS_PER_HAND) {
     cRGB oldColor =
         RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND];
     RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND] = crgb;
     isLEDChangedRight[uint8_t((sled_num - LEDS_PER_HAND) / 8)] |=
         !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
+
+    isAnyLEDChanged = isAnyLEDChanged || isLEDChangedRight[uint8_t((sled_num - LEDS_PER_HAND) / 8)];
   } else {
     // TODO(anyone):
     // how do we want to handle debugging assertions about crazy user

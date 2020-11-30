@@ -67,6 +67,7 @@ class RaiseLEDDriver : public kaleidoscope::driver::led::Base<RaiseLEDDriverProp
   static void updateNeuronLED();
  private:
   static bool isLEDChangedNeuron;
+  static bool isAnyLEDChanged;
   static uint8_t isLEDChangedLeft[LED_BANKS];
   static uint8_t isLEDChangedRight[LED_BANKS];
   static cRGB neuronLED;

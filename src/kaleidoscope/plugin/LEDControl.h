@@ -92,8 +92,6 @@ class LEDControl : public kaleidoscope::Plugin {
   //
   static void activate(LEDModeInterface *plugin);
 
-  static uint8_t syncDelay;
-
   kaleidoscope::EventHandlerResult onSetup();
   kaleidoscope::EventHandlerResult onKeyswitchEvent(Key &mappedKey, KeyAddr key_addr, uint8_t keyState);
   kaleidoscope::EventHandlerResult beforeReportingState();
@@ -112,7 +110,6 @@ class LEDControl : public kaleidoscope::Plugin {
   }
 
  private:
-  static uint16_t syncTimer;
   static uint8_t mode_id;
   static uint8_t num_led_modes_;
   static LEDMode *cur_led_mode_;
