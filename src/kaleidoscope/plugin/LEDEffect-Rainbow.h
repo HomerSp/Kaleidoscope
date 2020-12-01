@@ -44,24 +44,29 @@ class LEDRainbowEffect : public Plugin,
     // members of their parent class. Most LED modes can do without.
     //
     explicit TransientLEDMode(const LEDRainbowEffect *parent)
-      : parent_(parent) {}
+      : parent_(parent) {
+      setSpeed(14);
+    }
 
     void update() final;
+
+    void setSpeed(uint8_t speed) final;
 
    private:
 
     const LEDRainbowEffect *parent_;
 
-    uint16_t rainbow_hue = 0;   //  stores 0 to 614
+    uint16_t rainbow_hue = 0;  //  stores 0 to 3600 to get more precision
 
-    uint8_t rainbow_steps = 1;  //  number of hues we skip in a 360 range per update
-    uint8_t rainbow_last_update = 0;
+    uint16_t rainbow_last_update = 0;
+    uint16_t rainbow_delay = 90;
+    uint16_t rainbow_steps = 23;
 
     byte rainbow_saturation = 255;
   };
 
  private:
-  uint8_t rainbow_update_delay = 40; // delay between updates (ms)
+  uint8_t rainbow_update_delay = 86; // minimum delay between updates (ms)
   byte rainbow_value = 50;
 };
 
