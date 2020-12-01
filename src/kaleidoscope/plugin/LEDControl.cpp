@@ -31,6 +31,7 @@ uint8_t LEDControl::num_led_modes_ = LEDModeManager::numLEDModes();
 LEDMode *LEDControl::cur_led_mode_ = nullptr;
 bool LEDControl::enabled_ = true;
 Key LEDControl::pending_next_prev_key_ = Key_NoKey;
+uint8_t LEDControl::led_speed_ = 14;
 
 LEDControl::LEDControl(void) {
 }
@@ -200,6 +201,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     AT,
     THEME,
     BRIGHTNESS,
+    SPEED,
   } subCommand;
 
   if (!Runtime.has_leds)
@@ -209,7 +211,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
                                        "led.setAll\n"
                                        "led.mode\n"
                                        "led.brightness\n"
-                                       "led.theme")))
+                                       "led.theme\n"
+                                       "led.speed")))
     return EventHandlerResult::OK;
 
   if (strncmp_P(command, PSTR("led."), 4) != 0)
@@ -224,6 +227,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     subCommand = THEME;
   else if (strcmp_P(command + 4, PSTR("brightness")) == 0)
     subCommand = BRIGHTNESS;
+  else if (strcmp_P(command + 4, PSTR("speed")) == 0)
+    subCommand = SPEED;
   else
     return EventHandlerResult::OK;
 
@@ -302,6 +307,17 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
       ::Focus.read(color);
 
       ::LEDControl.setCrgbAt(led_index.offset(), color);
+    }
+    break;
+  }
+  case SPEED: {
+    if (::Focus.isEOL()) {
+      ::Focus.send(::LEDControl.getSpeed());
+    } else {
+      uint8_t speed;
+
+      ::Focus.read(speed);
+      ::LEDControl.setSpeed(speed);
     }
     break;
   }

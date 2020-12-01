@@ -92,6 +92,12 @@ class LEDMode : public kaleidoscope::Plugin,
    */
   virtual void refreshAt(KeyAddr key_addr) {}
 
+  /** Set the speed of the animation
+   *
+   * @param speed how long in seconds the full animation should take.
+   */
+  virtual void setSpeed(uint8_t speed) {}
+
  public:
 
   /** Plugin initialization.

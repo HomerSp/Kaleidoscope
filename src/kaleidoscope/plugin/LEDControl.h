@@ -73,8 +73,10 @@ class LEDControl : public kaleidoscope::Plugin {
 
     set_all_leds_to({0, 0, 0});
 
-    if (cur_led_mode_ != nullptr)
+    if (cur_led_mode_ != nullptr) {
+      cur_led_mode_->setSpeed(led_speed_);
       cur_led_mode_->onActivate();
+    }
   }
 
   static void setCrgbAt(uint8_t led_index, cRGB crgb);
@@ -109,12 +111,23 @@ class LEDControl : public kaleidoscope::Plugin {
     return Runtime.device().ledDriver().getBrightness();
   }
 
+  static void setSpeed(uint8_t speed) {
+    led_speed_ = speed;
+    if (cur_led_mode_ != nullptr) {
+      cur_led_mode_->setSpeed(led_speed_);
+    }
+  }
+  static uint8_t getSpeed() {
+    return led_speed_;
+  }
+
  private:
   static uint8_t mode_id;
   static uint8_t num_led_modes_;
   static LEDMode *cur_led_mode_;
   static bool enabled_;
   static Key pending_next_prev_key_;
+  static uint8_t led_speed_;
 };
 
 class FocusLEDCommand : public Plugin {
