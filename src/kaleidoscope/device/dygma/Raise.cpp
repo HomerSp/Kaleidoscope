@@ -57,6 +57,8 @@ struct RaiseHands {
   static void keyscanInterval(uint16_t interval);
   static uint16_t keyscanInterval() { return keyscan_interval_; }
 
+  static String getChipID();
+
   static void ledBrightnessCorrection(uint8_t brightness);
   static uint8_t ledBrightnessCorrection() {
     return led_brightness_correction_;
@@ -123,6 +125,18 @@ void RaiseHands::ledBrightnessCorrection(uint8_t brightness) {
   led_brightness_correction_ = brightness;
   Runtime.storage().put(settings_brightness_, led_brightness_correction_);
   Runtime.storage().commit();
+}
+
+String RaiseHands::getChipID() {
+  uint32_t pdwUniqueID[4];
+  pdwUniqueID[0] = *(volatile uint32_t*)(0x0080A00C);
+  pdwUniqueID[1] = *(volatile uint32_t*)(0x0080A040);
+  pdwUniqueID[2] = *(volatile uint32_t*)(0x0080A044);
+  pdwUniqueID[3] = *(volatile uint32_t*)(0x0080A048);
+  char buf[33];
+  snprintf(buf, sizeof(buf), "%8x%8x%8x%8x",
+  pdwUniqueID[0], pdwUniqueID[1], pdwUniqueID[2], pdwUniqueID[3]);
+  return String(buf);
 }
 
 void RaiseHands::initializeSides() {
@@ -541,6 +555,9 @@ uint8_t Raise::settings::joint() { return RaiseHands::rightHand.readJoint(); }
 
 uint16_t Raise::settings::keyscanInterval() {
   return RaiseHands::keyscanInterval();
+}
+String Raise::settings::getChipID() {
+  return RaiseHands::getChipID();
 }
 void Raise::settings::keyscanInterval(uint16_t interval) {
   RaiseHands::keyscanInterval(interval);

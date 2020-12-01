@@ -225,6 +225,7 @@ class Raise: public kaleidoscope::device::Base<RaiseProps> {
 
     uint16_t keyscanInterval();
     void keyscanInterval(uint16_t interval);
+    String getChipID();
   } settings;
 };
 

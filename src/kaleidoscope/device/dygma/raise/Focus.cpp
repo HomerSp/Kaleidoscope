@@ -32,7 +32,7 @@ namespace raise {
 #endif
 
 EventHandlerResult Focus::onFocusEvent(const char *command) {
-  if (::Focus.handleHelp(command, PSTR("hardware.version\nhardware.side_power\nhardware.side_ver\nhardware.sled_ver\nhardware.sled_current\nhardware.layout\nhardware.joint\nhardware.keyscan\nhardware.crc_errors\nhardware.firmware")))
+  if (::Focus.handleHelp(command, PSTR("hardware.version\nhardware.side_power\nhardware.side_ver\nhardware.sled_ver\nhardware.sled_current\nhardware.layout\nhardware.joint\nhardware.keyscan\nhardware.crc_errors\nhardware.firmware\nhardware.chip_id")))
     return EventHandlerResult::OK;
 
   if (strncmp_P(command, PSTR("hardware."), 9) != 0)
@@ -45,6 +45,11 @@ EventHandlerResult Focus::onFocusEvent(const char *command) {
 
   if (strcmp_P(command + 9, PSTR("firmware")) == 0) {
     ::Focus.send(RAISE_FIRMWARE_VERSION);
+    return EventHandlerResult::EVENT_CONSUMED;
+  }
+
+  if (strcmp_P(command + 9, PSTR("chip_id")) == 0) {
+    ::Focus.send(Runtime.device().settings.getChipID());
     return EventHandlerResult::EVENT_CONSUMED;
   }
 
