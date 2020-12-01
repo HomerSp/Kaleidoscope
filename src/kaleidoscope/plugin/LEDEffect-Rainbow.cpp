@@ -55,29 +55,26 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
     return;
 
   if (!Runtime.hasTimeExpired(rainbow_last_update,
-                              parent_->rainbow_update_delay)) {
+                              rainbow_delay)) {
     return;
-  } else {
-    rainbow_last_update += parent_->rainbow_update_delay;
   }
+
+  rainbow_last_update += rainbow_delay;
 
   for (auto led_index : Runtime.device().LEDs().all()) {
-    uint16_t led_hue = rainbow_hue + 16 * (led_index.offset() / 4);
-    // We want led_hue to be capped at 255, but we do not want to clip it to
-    // that, because that does not result in a nice animation. Instead, when it
-    // is higher than 255, we simply substract 255, and repeat that until we're
-    // within cap. This lays out the rainbow in a kind of wave.
-    while (led_hue >= 255) {
-      led_hue -= 255;
-    }
-
-    cRGB rainbow = hsvToRgb(led_hue, rainbow_saturation, parent_->rainbow_value);
+    uint16_t led_hue = ((rainbow_hue / 10) + 16 * (led_index.offset() / 4)) % 360;
+    cRGB rainbow = hsvToRgb360(led_hue, rainbow_saturation, parent_->rainbow_value);
     ::LEDControl.setCrgbAt(led_index.offset(), rainbow);
   }
-  rainbow_hue += rainbow_wave_steps;
-  if (rainbow_hue >= 255) {
-    rainbow_hue -= 255;
-  }
+  rainbow_hue = (rainbow_hue + rainbow_steps) % 3600;
+}
+
+void LEDRainbowWaveEffect::TransientLEDMode::setSpeed(uint8_t speed) {
+  // We want to use the lowest modifier to get a smooth transition without
+  // using too many cpu cycles.
+  uint8_t mod = min((3600 / speed) / 10, 1000 / parent_->rainbow_update_delay);
+  rainbow_steps = (3600 / speed) / mod;
+  rainbow_delay = 1000 / mod;
 }
 
 void LEDRainbowWaveEffect::brightness(byte brightness) {
