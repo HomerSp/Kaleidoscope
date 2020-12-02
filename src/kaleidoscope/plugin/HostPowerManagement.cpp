@@ -27,7 +27,13 @@ namespace kaleidoscope {
 namespace plugin {
 
 bool HostPowerManagement::was_suspended_ = false;
+#ifdef __AVR__
 bool HostPowerManagement::initial_suspend_ = true;
+#elif defined(ARDUINO_SAMD_RAISE)
+uint16_t HostPowerManagement::suspend_timer = 0;
+uint16_t HostPowerManagement::saved_fnum = 0;
+uint8_t HostPowerManagement::fnum_counter = 0;
+#endif
 
 EventHandlerResult HostPowerManagement::beforeEachCycle() {
 
@@ -48,6 +54,29 @@ EventHandlerResult HostPowerManagement::beforeEachCycle() {
       was_suspended_ = false;
       hostPowerManagementEventHandler(Resume);
     }
+  }
+#elif defined(ARDUINO_SAMD_RAISE)
+  // Check the frame number to determine if we're suspended
+  if (Runtime.hasTimeExpired(suspend_timer, 10)) {
+    if (saved_fnum == USB->DEVICE.FNUM.bit.FNUM && !was_suspended_) {
+      // If we have the same frame for 10 * 100 milliseconds we're most likely suspended
+      if (fnum_counter >= 100) {
+        hostPowerManagementEventHandler(Suspend);
+        was_suspended_ = true;
+      } else {
+        fnum_counter++;
+      }
+    } else if (saved_fnum != USB->DEVICE.FNUM.bit.FNUM) {
+      if (was_suspended_) {
+        hostPowerManagementEventHandler(Resume);
+        was_suspended_ = false;
+      }
+
+      saved_fnum = USB->DEVICE.FNUM.bit.FNUM;
+      fnum_counter = 0;
+    }
+
+    suspend_timer += 10;
   }
 #endif
 
