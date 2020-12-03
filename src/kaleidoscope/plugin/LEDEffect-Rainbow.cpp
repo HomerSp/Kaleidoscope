@@ -28,7 +28,7 @@ void LEDRainbowEffect::TransientLEDMode::update(void) {
     return;
   }
 
-  rainbow_last_update += rainbow_delay;
+  rainbow_last_update = Runtime.millisAtCycleStart();
 
   cRGB rainbow = hsvToRgb360((rainbow_hue / 10), rainbow_saturation, parent_->rainbow_value);
   ::LEDControl.set_all_leds_to(rainbow);
@@ -39,7 +39,8 @@ void LEDRainbowEffect::TransientLEDMode::update(void) {
 void LEDRainbowEffect::TransientLEDMode::setSpeed(uint8_t speed) {
   // We want to use the lowest modifier to get a smooth transition without
   // using too many cpu cycles.
-  uint8_t mod = min((3600 / speed) / 10, 1000 / parent_->rainbow_update_delay);
+  uint16_t frame_timer = max(speed * 62 / 10, 40);
+  uint8_t mod = min((3600 / speed) / 10, 1000 / frame_timer);
   rainbow_steps = (3600 / speed) / mod;
   rainbow_delay = 1000 / mod;
 }
@@ -64,7 +65,7 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
     return;
   }
 
-  rainbow_last_update += rainbow_delay;
+  rainbow_last_update = Runtime.millisAtCycleStart();
 
   for (auto led_index : Runtime.device().LEDs().all()) {
     uint16_t led_hue = ((rainbow_hue / 10) + 16 * (led_index.offset() / 4)) % 360;
@@ -77,7 +78,8 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
 void LEDRainbowWaveEffect::TransientLEDMode::setSpeed(uint8_t speed) {
   // We want to use the lowest modifier to get a smooth transition without
   // using too many cpu cycles.
-  uint8_t mod = min((3600 / speed) / 10, 1000 / parent_->rainbow_update_delay);
+  uint16_t frame_timer = max(speed * 62 / 10, 40);
+  uint8_t mod = min((3600 / speed) / 10, 1000 / frame_timer);
   rainbow_steps = (3600 / speed) / mod;
   rainbow_delay = 1000 / mod;
 }
